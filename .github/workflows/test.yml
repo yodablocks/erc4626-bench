@@ -1,0 +1,33 @@
+name: test
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+jobs:
+  evm:
+    name: Foundry build and benchmark
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1.9.1
+        with:
+          version: v1.8.3
+      - run: forge build --sizes
+      - run: forge test -vvv
+      - name: Per-transaction gas, default profile
+        run: script/bench-evm.py
+  via-ir:
+    name: via-IR build and benchmark
+    runs-on: ubuntu-latest
+    env:
+      FOUNDRY_PROFILE: viair
+    steps:
+      - uses: actions/checkout@v4
+      - uses: foundry-rs/foundry-toolchain@v1.9.1
+        with:
+          version: v1.8.3
+      - run: forge build --sizes
+      - run: forge test -vvv
+      - name: Per-transaction gas, via-IR profile
+        run: script/bench-evm.py

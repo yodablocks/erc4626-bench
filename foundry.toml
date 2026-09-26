@@ -1,0 +1,38 @@
+[profile.default]
+src = "src"
+out = "out"
+libs = ["lib"]
+solc = "0.8.37"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 10_000_000
+via_ir = false
+ignored_warnings_from = ["lib"]
+gas_reports = ["YulSafeERC20", "SoladyVault", "PlainPackedVault", "LeanVault", "LeanVault2"]
+
+[profile.viair]
+src = "src"
+out = "out-viair"
+libs = ["lib"]
+solc = "0.8.36"
+evm_version = "cancun"
+optimizer = true
+optimizer_runs = 200
+via_ir = true
+ignored_warnings_from = ["lib"]
+
+# zkSync Era through zksolc. Matter Labs' patched solc stops at 0.8.30.
+[profile.zksync]
+src = "src"
+out = "out-zksync"
+libs = ["lib"]
+solc = "0.8.30"
+optimizer = true
+optimizer_runs = 10_000_000
+via_ir = false
+ignored_warnings_from = ["lib"]
+
+[profile.zksync.zksync]
+compile = true
+startup = true
+suppressed_warnings = ["assemblycreate"]
