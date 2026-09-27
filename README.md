@@ -30,7 +30,7 @@ The first five pass a16z's 26 ERC4626 properties in the YulSafe repo, `LeanVault
 
 ## Results
 
-Per transaction, solc 0.8.37, cancun, optimizer at 10,000,000 runs, 2026-09-26; Lean3 added 2026-09-27 on the same toolchain, with the other columns reproduced unchanged:
+Per transaction, solc 0.8.37, cancun, optimizer at 10,000,000 runs, forge 1.3.5 (foundry-zksync 0.1.4), 2026-09-26; Lean3 added 2026-09-27 on the same toolchain, with the other columns reproduced unchanged. CI runs Foundry 1.8.3 and reports YulSafe and Plain 2,800 higher on subsequent deposit, mint, withdraw and redeem; the other four columns are identical there:
 
 | Call | YulSafe | Plain | Lean | Lean2 | Lean3 | Solady |
 |---|---|---|---|---|---|---|
