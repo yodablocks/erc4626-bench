@@ -4,7 +4,8 @@
 Runs each GasBenchmark test on its own with `forge test --isolate`, so every
 call gets real transaction semantics (cold storage access), and takes the gas
 of the last vault call in the trace. This is the number a user pays, minus the
-21,000 intrinsic transaction cost, and it is the same for all three vaults.
+21,000 intrinsic transaction cost, and it is the same for every vault. A vault without a
+test for a call, such as `permit` on the vaults that lack it, prints `-`.
 
 `forge test --gas-report` produces the same values but aggregates calls from
 different tests into one row, which is how the first and subsequent deposit
@@ -14,9 +15,9 @@ got their labels swapped in an earlier README.
     FOUNDRY_PROFILE=viair script/bench-evm.py
 """
 import subprocess, re
-ops=["first_deposit","subsequent_deposit","mint","withdraw","redeem","totalAssets","convertToShares","convertToAssets"]
-vaults=[("yulsafe","YulSafeERC20"),("plain","PlainPackedVault"),("lean","LeanVault"),("lean2","LeanVault2"),("solady","SoladyVault")]
-print(f"{'call':20s} {'YulSafe':>9s} {'Plain':>9s} {'Lean':>9s} {'Lean2':>9s} {'Solady':>9s}")
+ops=["first_deposit","subsequent_deposit","mint","withdraw","redeem","totalAssets","convertToShares","convertToAssets","permit"]
+vaults=[("yulsafe","YulSafeERC20"),("plain","PlainPackedVault"),("lean","LeanVault"),("lean2","LeanVault2"),("lean3","LeanVault3"),("solady","SoladyVault")]
+print(f"{'call':20s} {'YulSafe':>9s} {'Plain':>9s} {'Lean':>9s} {'Lean2':>9s} {'Lean3':>9s} {'Solady':>9s}")
 for op in ops:
     row=f"{op:20s}"
     for v,c in vaults:

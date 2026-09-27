@@ -7,6 +7,7 @@ import {SoladyVault} from "../src/vaults/SoladyVault.sol";
 import {PlainPackedVault} from "../src/vaults/PlainPackedVault.sol";
 import {LeanVault} from "../src/vaults/LeanVault.sol";
 import {LeanVault2} from "../src/vaults/LeanVault2.sol";
+import {LeanVault3} from "../src/vaults/LeanVault3.sol";
 import {MockERC20} from "../src/mocks/MockERC20.sol";
 
 /// @title GasBenchmark
@@ -18,6 +19,7 @@ contract GasBenchmark is Test {
     PlainPackedVault public plain;
     LeanVault public lean;
     LeanVault2 public lean2;
+    LeanVault3 public lean3;
     MockERC20 public asset;
 
     address public alice = address(0x1);
@@ -33,6 +35,7 @@ contract GasBenchmark is Test {
         plain = new PlainPackedVault(address(asset), "Plain Vault", "pVAULT");
         lean = new LeanVault(address(asset), "Lean Vault", "lVAULT");
         lean2 = new LeanVault2(address(asset), "Lean Vault 2", "lVAULT2");
+        lean3 = new LeanVault3(address(asset), "Lean Vault 3", "lVAULT3");
 
         // Fund alice
         asset.mint(alice, INITIAL_BALANCE);
@@ -44,6 +47,7 @@ contract GasBenchmark is Test {
         asset.approve(address(plain), type(uint256).max);
         asset.approve(address(lean), type(uint256).max);
         asset.approve(address(lean2), type(uint256).max);
+        asset.approve(address(lean3), type(uint256).max);
         vm.stopPrank();
     }
 
@@ -424,5 +428,114 @@ contract GasBenchmark is Test {
         lean2.deposit(10000e18, alice);
 
         lean2.convertToAssets(1000e18);
+    }
+
+    /// @notice Benchmark lean shell v3 first deposit
+    function test_gas_lean3_first_deposit() public {
+        vm.prank(alice);
+        lean3.deposit(10000e18, alice);
+    }
+
+    /// @notice Benchmark lean shell v3 subsequent deposit
+    function test_gas_lean3_subsequent_deposit() public {
+        // First deposit to initialize
+        vm.prank(alice);
+        lean3.deposit(10000e18, alice);
+
+        // Benchmark subsequent deposit
+        vm.prank(alice);
+        lean3.deposit(5000e18, alice);
+    }
+
+    /// @notice Benchmark lean shell v3 withdraw
+    function test_gas_lean3_withdraw() public {
+        // Setup: deposit first
+        vm.prank(alice);
+        lean3.deposit(10000e18, alice);
+
+        // Benchmark withdraw
+        vm.prank(alice);
+        lean3.withdraw(5000e18, alice, alice);
+    }
+
+    /// @notice Benchmark lean shell v3 redeem
+    function test_gas_lean3_redeem() public {
+        // Setup: deposit first
+        vm.prank(alice);
+        uint256 shares = lean3.deposit(10000e18, alice);
+
+        // Benchmark redeem (half the shares)
+        vm.prank(alice);
+        lean3.redeem(shares / 2, alice, alice);
+    }
+
+    /// @notice Benchmark lean shell v3 mint
+    function test_gas_lean3_mint() public {
+        // First deposit to initialize
+        vm.prank(alice);
+        lean3.deposit(10000e18, alice);
+
+        // Benchmark mint
+        vm.prank(alice);
+        lean3.mint(5000e18, alice);
+    }
+
+    /// @notice Benchmark lean shell v3 totalAssets
+    function test_gas_lean3_totalAssets() public view {
+        lean3.totalAssets();
+    }
+
+    /// @notice Benchmark lean shell v3 convertToShares
+    function test_gas_lean3_convertToShares() public {
+        vm.prank(alice);
+        lean3.deposit(10000e18, alice);
+
+        lean3.convertToShares(1000e18);
+    }
+
+    /// @notice Benchmark lean shell v3 convertToAssets
+    function test_gas_lean3_convertToAssets() public {
+        vm.prank(alice);
+        lean3.deposit(10000e18, alice);
+
+        lean3.convertToAssets(1000e18);
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                              PERMIT
+    //////////////////////////////////////////////////////////////*/
+
+    /// @dev Signs an EIP-2612 permit from a fresh key, first nonce,
+    ///      spender alice. Only Solady and LeanVault3 implement permit.
+    function _signPermit(bytes32 domainSeparator)
+        internal
+        view
+        returns (address owner, uint8 v, bytes32 r, bytes32 s)
+    {
+        uint256 pk = 0xA11CE;
+        owner = vm.addr(pk);
+        bytes32 structHash = keccak256(
+            abi.encode(
+                keccak256("Permit(address owner,address spender,uint256 value,uint256 nonce,uint256 deadline)"),
+                owner,
+                alice,
+                1000e18,
+                0,
+                block.timestamp
+            )
+        );
+        (v, r, s) = vm.sign(pk, keccak256(abi.encodePacked("\x19\x01", domainSeparator, structHash)));
+    }
+
+    /// @notice Benchmark Solady permit
+    function test_gas_solady_permit() public {
+        (address owner, uint8 v, bytes32 r, bytes32 s) = _signPermit(solady.DOMAIN_SEPARATOR());
+        solady.permit(owner, alice, 1000e18, block.timestamp, v, r, s);
+    }
+
+    /// @notice Benchmark lean shell v3 permit
+    function test_gas_lean3_permit() public {
+        (address owner, uint8 v, bytes32 r, bytes32 s) = _signPermit(lean3.DOMAIN_SEPARATOR());
+        lean3.permit(owner, alice, 1000e18, block.timestamp, v, r, s);
     }
 }
