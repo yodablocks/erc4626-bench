@@ -30,34 +30,34 @@ The first five pass a16z's 26 ERC4626 properties in the YulSafe repo, `LeanVault
 
 ## Results
 
-Per transaction, solc 0.8.37, cancun, optimizer at 10,000,000 runs, forge 1.3.5 (foundry-zksync 0.1.4), 2026-09-26; Lean3 added 2026-09-27 on the same toolchain, with the other columns reproduced unchanged. CI runs Foundry 1.8.3 and reports YulSafe and Plain 2,800 higher on subsequent deposit, mint, withdraw and redeem; the other four columns are identical there:
+Per transaction, solc 0.8.37, cancun, optimizer at 10,000,000 runs, forge 1.3.5 (foundry-zksync 0.1.4), 2026-09-26; Lean3 added 2026-09-27 and refreshed 2026-09-28 for leanvault's pause change, on the same toolchain, with the other columns reproduced unchanged. CI runs Foundry 1.8.3 and reports YulSafe and Plain 2,800 higher on subsequent deposit, mint, withdraw and redeem; the other four columns are identical there:
 
 | Call | YulSafe | Plain | Lean | Lean2 | Lean3 | Solady |
 |---|---|---|---|---|---|---|
 | `deposit()` first, cold vault | 175,513 | 173,805 | 129,500 | 106,096 | 106,096 | 106,009 |
 | `deposit()` subsequent | 63,028 | 61,551 | 54,469 | 54,796 | 54,796 | 54,709 |
 | `mint()` | 63,078 | 61,740 | 54,636 | 54,843 | 54,877 | 54,735 |
-| `withdraw()` | 61,279 | 59,938 | 52,986 | 53,264 | 53,303 | 54,576 |
-| `redeem()` | 61,303 | 59,818 | 52,866 | 53,126 | 53,160 | 53,284 |
+| `withdraw()` | 61,279 | 59,938 | 52,986 | 53,264 | 53,265 | 54,576 |
+| `redeem()` | 61,303 | 59,818 | 52,866 | 53,126 | 53,122 | 53,284 |
 | `totalAssets()` | 2,321 | 2,321 | 2,321 | 2,321 | 2,321 | 5,621 |
 | `convertToShares()` | 2,674 | 2,679 | 2,656 | 3,002 | 3,002 | 8,072 |
 | `convertToAssets()` | 2,675 | 2,680 | 2,680 | 3,004 | 3,104 | 8,108 |
 | `permit()` | | | | | 73,903 | 76,296 |
-| Deployment gas | 1,712,163 | 2,154,694 | 1,983,630 | 1,764,437 | 2,028,691 | 1,185,598 |
+| Deployment gas | 1,712,163 | 2,154,694 | 1,983,630 | 1,764,437 | 1,959,733 | 1,185,598 |
 
-Lean3 is Lean2 with hooks and `permit`. Together they add 34 to 100 gas on four calls and 264,266 to deployment; a signed `permit` runs 2,393 cheaper than Solady's. Deployment gas depends on the source path through the metadata hash: Lean and Lean2 were measured from YulSafe's copies under `test/mocks/` and deploy 12 gas cheaper from this repo, Lean3 is measured here.
+Lean3 is Lean2 with hooks, `permit`, and a pause that stops deposits but never an exit. Against Lean2 it costs 34 gas more on `mint`, 100 more on `convertToAssets`, 1 more on `withdraw`, 4 less on `redeem`, and 195,308 more to deploy; a signed `permit` runs 2,393 cheaper than Solady's. Deployment gas depends on the source path through the metadata hash: Lean and Lean2 were measured from YulSafe's copies under `test/mocks/` and deploy 12 gas cheaper from this repo, Lean3 is measured here.
 
 EraVM, from receipts on `anvil-zksync` 0.6.11 with zksolc 1.5.15 and the patched solc 0.8.30:
 
 | Call | YulSafe | Plain | Lean | Lean2 | Lean3 | Solady |
 |---|---|---|---|---|---|---|
-| `deposit()` first | 201,031 | 198,979 | 179,832 | 170,532 | 171,152 | 173,466 |
-| `deposit()` subsequent | 178,774 | 176,740 | 163,369 | 163,172 | 163,792 | 166,106 |
-| `mint()` | 178,768 | 176,734 | 163,236 | 162,932 | 163,552 | 166,148 |
-| `withdraw()` | 176,294 | 174,272 | 160,806 | 160,502 | 161,122 | 167,356 |
-| `redeem()` | 176,288 | 174,266 | 160,800 | 160,484 | 161,104 | 164,200 |
+| `deposit()` first | 201,031 | 198,979 | 179,832 | 170,532 | 171,088 | 173,466 |
+| `deposit()` subsequent | 178,774 | 176,740 | 163,369 | 163,172 | 163,728 | 166,106 |
+| `mint()` | 178,768 | 176,734 | 163,236 | 162,932 | 163,488 | 166,148 |
+| `withdraw()` | 176,294 | 174,272 | 160,806 | 160,502 | 161,052 | 167,356 |
+| `redeem()` | 176,288 | 174,266 | 160,800 | 160,484 | 161,034 | 164,200 |
 
-On EraVM, Lean3 pays a flat 620 gas per call over Lean2 and still beats Solady on every row; Lean beats it on everything but the first deposit. EraVM charges pubdata by how well each written value compresses, so a call's gas depends on the balances and nonces written before it. Lean3 runs from its own account for that reason: sharing the first account moved Lean's subsequent deposit by 119 gas. `permit` is not measured on EraVM.
+On EraVM, Lean3 pays 550 to 556 gas per call over Lean2 and still beats Solady on every row; Lean beats it on everything but the first deposit. EraVM charges pubdata by how well each written value compresses, so a call's gas depends on the balances and nonces written before it. Lean3 runs from its own account for that reason: sharing the first account moved Lean's subsequent deposit by 119 gas. `permit` is not measured on EraVM.
 
 ## Run it
 

@@ -4,11 +4,12 @@ pragma solidity ^0.8.24;
 import {ReentrancyGuardTransient} from "solady/utils/ReentrancyGuardTransient.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 
-// Copied from github.com/yodablocks/leanvault at fc66893, src/LeanVaultBase.sol
+// Copied from github.com/yodablocks/leanvault at b20f611, src/LeanVaultBase.sol
 // and src/LeanVault.sol, with only the two contract names changed so they do
 // not collide with this repo's LeanVault. This is leanvault's idle vault as
 // shipped: LeanVault2's accounting behind three virtual hooks, plus EIP-2612
-// permit. Refresh by re-copying, never by editing here.
+// permit, and a pause that stops deposits but never an exit. Refresh by
+// re-copying, never by editing here.
 
 /// @title LeanVault3Base
 /// @notice The ERC4626 accounting shell: packed totals and pause flag in one
@@ -303,8 +304,8 @@ abstract contract LeanVault3Base is ReentrancyGuardTransient {
         nonReentrant
         returns (uint256 shares)
     {
-        (uint256 totalAssets_, uint256 totalSupply_, bool paused_) = (_totalAssets, _totalSupply, _paused);
-        if (paused_) revert Paused();
+        // An exit is never paused: pause stops new money, not depositors leaving.
+        (uint256 totalAssets_, uint256 totalSupply_) = (_totalAssets, _totalSupply);
         if (assets == 0) revert ZeroAmount();
         if (receiver == address(0)) revert ZeroAddress();
         uint256 net = _netTotalAssets(totalAssets_);
@@ -326,8 +327,8 @@ abstract contract LeanVault3Base is ReentrancyGuardTransient {
         nonReentrant
         returns (uint256 assets)
     {
-        (uint256 totalAssets_, uint256 totalSupply_, bool paused_) = (_totalAssets, _totalSupply, _paused);
-        if (paused_) revert Paused();
+        // An exit is never paused: pause stops new money, not depositors leaving.
+        (uint256 totalAssets_, uint256 totalSupply_) = (_totalAssets, _totalSupply);
         if (shares == 0) revert ZeroAmount();
         if (receiver == address(0)) revert ZeroAddress();
         if (shares > totalSupply_) revert InsufficientShares();
@@ -386,12 +387,10 @@ abstract contract LeanVault3Base is ReentrancyGuardTransient {
     }
 
     function maxWithdraw(address account) public view virtual returns (uint256) {
-        if (_paused) return 0;
         return _toAssets(_balances[account], _netTotalAssets(_totalAssets), _totalSupply, false);
     }
 
     function maxRedeem(address account) public view virtual returns (uint256) {
-        if (_paused) return 0;
         return _balances[account];
     }
 
@@ -406,6 +405,8 @@ abstract contract LeanVault3Base is ReentrancyGuardTransient {
         emit OwnershipTransferred(previousOwner, newOwner);
     }
 
+    /// @notice Stops deposit and mint. Withdraw and redeem stay open, so the owner
+    ///         can halt a vault but cannot lock depositors in it.
     function pause() external onlyOwner {
         _paused = true;
         emit PausedEvent();
